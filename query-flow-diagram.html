@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ChatBot Query Flow Diagram</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        h1 {
+            color: #fff;
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 2rem;
+        }
+        .subtitle {
+            color: #8892b0;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 1rem;
+        }
+        .diagram-container {
+            background: #fff;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow-x: auto;
+        }
+        .mermaid {
+            display: flex;
+            justify-content: center;
+        }
+        .legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            justify-content: center;
+            margin-top: 30px;
+            padding: 20px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 8px;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #fff;
+            font-size: 0.9rem;
+        }
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+        }
+        .frontend { background: #61dafb; }
+        .backend { background: #68d391; }
+        .ai { background: #f6ad55; }
+        .database { background: #fc8181; }
+        .decision { background: #b794f4; }
+
+        .file-reference {
+            margin-top: 30px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 8px;
+            padding: 20px;
+        }
+        .file-reference h3 {
+            color: #fff;
+            margin-bottom: 15px;
+        }
+        .file-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 15px;
+        }
+        .file-card {
+            background: rgba(255,255,255,0.08);
+            border-radius: 6px;
+            padding: 12px 15px;
+            border-left: 3px solid;
+        }
+        .file-card.frontend-card { border-color: #61dafb; }
+        .file-card.backend-card { border-color: #68d391; }
+        .file-card h4 {
+            color: #fff;
+            font-size: 0.85rem;
+            margin-bottom: 5px;
+            font-family: 'Monaco', 'Menlo', monospace;
+        }
+        .file-card p {
+            color: #8892b0;
+            font-size: 0.8rem;
+        }
+        .instructions {
+            text-align: center;
+            color: #8892b0;
+            margin-top: 20px;
+            font-size: 0.85rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>RAG Chatbot Query Flow</h1>
+        <p class="subtitle">Interactive visualization of how a user query flows through the system</p>
+
+        <div class="diagram-container">
+            <div class="mermaid">
+flowchart TB
+    subgraph FE["<b>FRONTEND</b>"]
+        UI["<b>User Interface</b><br/>index.html:59-64"]
+        JS["<b>sendMessage()</b><br/>script.js:45-96"]
+        Display["<b>Display Response</b><br/>script.js:85"]
+    end
+
+    subgraph BE["<b>BACKEND</b>"]
+        API["<b>POST /api/query</b><br/>app.py:56-74"]
+
+        subgraph RAG["<b>RAG System</b>"]
+            RAGQuery["<b>rag_system.query()</b><br/>rag_system.py:102-140"]
+            Session["<b>SessionManager</b><br/>session_manager.py"]
+        end
+
+        subgraph AI["<b>AI Layer</b>"]
+            Generator["<b>AIGenerator</b><br/>ai_generator.py:43-87"]
+            Claude["<b>Claude API</b><br/>Anthropic"]
+            ToolHandler["<b>Tool Execution</b><br/>ai_generator.py:89-135"]
+        end
+
+        subgraph Search["<b>Search Layer</b>"]
+            SearchTool["<b>CourseSearchTool</b><br/>search_tools.py:52-86"]
+            VectorStore["<b>VectorStore</b><br/>vector_store.py:61-100"]
+        end
+    end
+
+    subgraph DB["<b>DATABASE</b>"]
+        ChromaDB[("<b>ChromaDB</b><br/>Embeddings Store")]
+    end
+
+    UI -->|"1. User types query"| JS
+    JS -->|"2. POST {query, session_id}"| API
+    API -->|"3. rag_system.query()"| RAGQuery
+    RAGQuery <-->|"4. Get/Update history"| Session
+    RAGQuery -->|"5. generate_response()"| Generator
+    Generator -->|"6. API call with tools"| Claude
+    Claude -->|"7. Tool use decision"| Decision{{"Need to<br/>search?"}}
+    Decision -->|"NO"| DirectResponse["Direct<br/>Answer"]
+    Decision -->|"YES"| ToolHandler
+    ToolHandler -->|"8. execute()"| SearchTool
+    SearchTool -->|"9. search()"| VectorStore
+    VectorStore -->|"10. query()"| ChromaDB
+    ChromaDB -->|"11. SearchResults"| VectorStore
+    VectorStore -->|"12. Formatted results"| SearchTool
+    SearchTool -->|"13. Tool result"| ToolHandler
+    ToolHandler -->|"14. Final Claude call"| Claude
+    Claude -->|"15. Final answer"| FinalResponse["Response<br/>+ Sources"]
+    DirectResponse --> RAGQuery
+    FinalResponse --> RAGQuery
+    RAGQuery -->|"16. Return (answer, sources)"| API
+    API -->|"17. JSON response"| Display
+    Display -->|"18. Show to user"| UI
+
+    classDef frontend fill:#61dafb,stroke:#333,stroke-width:2px,color:#000
+    classDef backend fill:#68d391,stroke:#333,stroke-width:2px,color:#000
+    classDef ai fill:#f6ad55,stroke:#333,stroke-width:2px,color:#000
+    classDef database fill:#fc8181,stroke:#333,stroke-width:2px,color:#000
+    classDef decision fill:#b794f4,stroke:#333,stroke-width:2px,color:#000
+    classDef response fill:#9ae6b4,stroke:#333,stroke-width:2px,color:#000
+
+    class UI,JS,Display frontend
+    class API,RAGQuery,Session backend
+    class Generator,Claude,ToolHandler ai
+    class SearchTool,VectorStore backend
+    class ChromaDB database
+    class Decision decision
+    class DirectResponse,FinalResponse response
+            </div>
+        </div>
+
+        <div class="legend">
+            <div class="legend-item">
+                <div class="legend-color frontend"></div>
+                <span>Frontend (React/JS)</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color backend"></div>
+                <span>Backend (Python/FastAPI)</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color ai"></div>
+                <span>AI Layer (Claude API)</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color database"></div>
+                <span>Database (ChromaDB)</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color decision"></div>
+                <span>Decision Point</span>
+            </div>
+        </div>
+
+        <div class="file-reference">
+            <h3>File References</h3>
+            <div class="file-grid">
+                <div class="file-card frontend-card">
+                    <h4>frontend/index.html</h4>
+                    <p>User interface with input field and chat display</p>
+                </div>
+                <div class="file-card frontend-card">
+                    <h4>frontend/script.js</h4>
+                    <p>Event handlers, API calls, message rendering</p>
+                </div>
+                <div class="file-card backend-card">
+                    <h4>backend/app.py</h4>
+                    <p>FastAPI endpoints and request handling</p>
+                </div>
+                <div class="file-card backend-card">
+                    <h4>backend/rag_system.py</h4>
+                    <p>RAG orchestration and component coordination</p>
+                </div>
+                <div class="file-card backend-card">
+                    <h4>backend/ai_generator.py</h4>
+                    <p>Claude API integration and tool handling</p>
+                </div>
+                <div class="file-card backend-card">
+                    <h4>backend/search_tools.py</h4>
+                    <p>Course search tool implementation</p>
+                </div>
+                <div class="file-card backend-card">
+                    <h4>backend/vector_store.py</h4>
+                    <p>ChromaDB vector search operations</p>
+                </div>
+                <div class="file-card backend-card">
+                    <h4>backend/session_manager.py</h4>
+                    <p>Conversation history management</p>
+                </div>
+            </div>
+        </div>
+
+        <p class="instructions">
+            Scroll to zoom | Click and drag to pan | Hover over nodes for details
+        </p>
+    </div>
+
+    <script>
+        mermaid.initialize({
+            startOnLoad: true,
+            theme: 'default',
+            flowchart: {
+                useMaxWidth: true,
+                htmlLabels: true,
+                curve: 'basis',
+                rankSpacing: 50,
+                nodeSpacing: 30
+            },
+            securityLevel: 'loose'
+        });
+    </script>
+</body>
+</html>

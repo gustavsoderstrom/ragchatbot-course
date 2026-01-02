@@ -1,0 +1,930 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Query Flow - Step by Step</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #0f0f23 0%, #1a1a3e 100%);
+            min-height: 100vh;
+            color: #fff;
+        }
+        .header {
+            text-align: center;
+            padding: 20px;
+            background: rgba(0,0,0,0.3);
+        }
+        h1 {
+            font-size: 1.8rem;
+            margin-bottom: 5px;
+        }
+        .subtitle {
+            color: #8892b0;
+            font-size: 0.95rem;
+        }
+        .main-container {
+            display: flex;
+            height: calc(100vh - 100px);
+        }
+        .diagram-panel {
+            flex: 1;
+            padding: 20px;
+            overflow: auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .info-panel {
+            width: 350px;
+            background: rgba(255,255,255,0.05);
+            border-left: 1px solid rgba(255,255,255,0.1);
+            display: flex;
+            flex-direction: column;
+        }
+        .step-info {
+            flex: 1;
+            padding: 25px;
+            overflow-y: auto;
+        }
+        .step-counter {
+            font-size: 0.85rem;
+            color: #64ffda;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 10px;
+        }
+        .step-title {
+            font-size: 1.4rem;
+            margin-bottom: 15px;
+            color: #fff;
+        }
+        .step-description {
+            color: #a8b2d1;
+            line-height: 1.7;
+            margin-bottom: 20px;
+        }
+        .step-file {
+            background: rgba(100, 255, 218, 0.1);
+            border: 1px solid rgba(100, 255, 218, 0.3);
+            border-radius: 6px;
+            padding: 12px 15px;
+            margin-bottom: 15px;
+        }
+        .step-file-label {
+            font-size: 0.75rem;
+            color: #64ffda;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 5px;
+        }
+        .step-file-path {
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 0.9rem;
+            color: #fff;
+        }
+        .step-code {
+            background: #1e1e3f;
+            border-radius: 6px;
+            padding: 15px;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 0.8rem;
+            color: #a8b2d1;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        .controls {
+            padding: 20px;
+            background: rgba(0,0,0,0.3);
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            align-items: center;
+        }
+        .btn {
+            padding: 12px 30px;
+            border: none;
+            border-radius: 6px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-weight: 500;
+        }
+        .btn-primary {
+            background: #64ffda;
+            color: #0a192f;
+        }
+        .btn-primary:hover {
+            background: #4cd9b8;
+            transform: translateY(-2px);
+        }
+        .btn-secondary {
+            background: rgba(255,255,255,0.1);
+            color: #fff;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+        .btn-secondary:hover {
+            background: rgba(255,255,255,0.2);
+        }
+        .btn:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .progress-bar {
+            display: flex;
+            gap: 4px;
+            margin: 0 20px;
+        }
+        .progress-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.2);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .progress-dot:hover {
+            background: rgba(255,255,255,0.4);
+        }
+        .progress-dot.active {
+            background: #64ffda;
+            box-shadow: 0 0 10px #64ffda;
+        }
+        .progress-dot.completed {
+            background: rgba(100, 255, 218, 0.5);
+        }
+
+        /* SVG Diagram Styles */
+        svg {
+            max-width: 100%;
+            height: auto;
+        }
+        .node {
+            transition: all 0.3s ease;
+        }
+        .node rect, .node ellipse {
+            transition: all 0.3s ease;
+        }
+        .node.inactive rect,
+        .node.inactive ellipse {
+            fill-opacity: 0.3;
+            stroke-opacity: 0.3;
+        }
+        .node.inactive text {
+            fill-opacity: 0.3;
+        }
+        .node.active rect,
+        .node.active ellipse {
+            stroke-width: 3;
+            filter: drop-shadow(0 0 10px currentColor);
+        }
+        .node.highlight rect,
+        .node.highlight ellipse {
+            stroke-width: 2;
+        }
+        .arrow {
+            transition: all 0.3s ease;
+            stroke-opacity: 0.15;
+            stroke-width: 2;
+        }
+        .arrow.active {
+            stroke-opacity: 1;
+            stroke-width: 3;
+            filter: drop-shadow(0 0 5px #64ffda);
+        }
+        .arrow-label {
+            transition: all 0.3s ease;
+            fill-opacity: 0.2;
+        }
+        .arrow-label.active {
+            fill-opacity: 1;
+        }
+        .arrow-head {
+            transition: all 0.3s ease;
+            fill-opacity: 0.15;
+        }
+        .arrow-head.active {
+            fill-opacity: 1;
+        }
+
+        /* Node colors */
+        .frontend rect { fill: #61dafb; stroke: #4fa8c7; }
+        .backend rect { fill: #68d391; stroke: #4a9e6b; }
+        .ai rect { fill: #f6ad55; stroke: #d4914a; }
+        .database ellipse { fill: #fc8181; stroke: #d46a6a; }
+        .decision polygon { fill: #b794f4; stroke: #9370d8; }
+        .response rect { fill: #9ae6b4; stroke: #7bc494; }
+
+        .node text {
+            fill: #1a1a2e;
+            font-size: 11px;
+            font-weight: 500;
+        }
+        .node .subtext {
+            font-size: 9px;
+            fill: #333;
+        }
+
+        @keyframes pulse {
+            0%, 100% { filter: drop-shadow(0 0 5px currentColor); }
+            50% { filter: drop-shadow(0 0 15px currentColor); }
+        }
+        .node.active {
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+
+        @keyframes flowAnimation {
+            0% { stroke-dashoffset: 20; }
+            100% { stroke-dashoffset: 0; }
+        }
+        .arrow.active {
+            stroke-dasharray: 10, 5;
+            animation: flowAnimation 0.5s linear infinite;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>RAG Chatbot Query Flow</h1>
+        <p class="subtitle">Click through each step to see how a user query flows through the system</p>
+    </div>
+
+    <div class="main-container">
+        <div class="diagram-panel">
+            <svg viewBox="0 0 900 700" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+                        <polygon points="0 0, 10 3.5, 0 7" fill="#64ffda" class="arrow-head"/>
+                    </marker>
+                    <marker id="arrowhead-dim" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+                        <polygon points="0 0, 10 3.5, 0 7" fill="#64ffda" fill-opacity="0.15"/>
+                    </marker>
+                </defs>
+
+                <!-- Background regions -->
+                <rect x="30" y="30" width="250" height="180" rx="10" fill="rgba(97,218,251,0.1)" stroke="rgba(97,218,251,0.3)"/>
+                <text x="45" y="55" fill="#61dafb" font-size="12" font-weight="bold">FRONTEND</text>
+
+                <rect x="30" y="230" width="840" height="400" rx="10" fill="rgba(104,211,145,0.1)" stroke="rgba(104,211,145,0.3)"/>
+                <text x="45" y="255" fill="#68d391" font-size="12" font-weight="bold">BACKEND</text>
+
+                <rect x="620" y="520" width="230" height="90" rx="10" fill="rgba(252,129,129,0.1)" stroke="rgba(252,129,129,0.3)"/>
+                <text x="635" y="545" fill="#fc8181" font-size="12" font-weight="bold">DATABASE</text>
+
+                <!-- Nodes -->
+                <g class="node frontend" id="node-ui">
+                    <rect x="50" y="70" width="120" height="50" rx="6"/>
+                    <text x="110" y="92" text-anchor="middle">User Interface</text>
+                    <text x="110" y="107" text-anchor="middle" class="subtext">index.html:59</text>
+                </g>
+
+                <g class="node frontend" id="node-js">
+                    <rect x="50" y="140" width="120" height="50" rx="6"/>
+                    <text x="110" y="162" text-anchor="middle">sendMessage()</text>
+                    <text x="110" y="177" text-anchor="middle" class="subtext">script.js:45</text>
+                </g>
+
+                <g class="node frontend" id="node-display">
+                    <rect x="190" y="70" width="120" height="50" rx="6"/>
+                    <text x="250" y="92" text-anchor="middle">Display Response</text>
+                    <text x="250" y="107" text-anchor="middle" class="subtext">script.js:85</text>
+                </g>
+
+                <g class="node backend" id="node-api">
+                    <rect x="50" y="280" width="140" height="50" rx="6"/>
+                    <text x="120" y="302" text-anchor="middle">POST /api/query</text>
+                    <text x="120" y="317" text-anchor="middle" class="subtext">app.py:56</text>
+                </g>
+
+                <g class="node backend" id="node-rag">
+                    <rect x="250" y="280" width="160" height="50" rx="6"/>
+                    <text x="330" y="302" text-anchor="middle">rag_system.query()</text>
+                    <text x="330" y="317" text-anchor="middle" class="subtext">rag_system.py:102</text>
+                </g>
+
+                <g class="node backend" id="node-session">
+                    <rect x="250" y="360" width="160" height="50" rx="6"/>
+                    <text x="330" y="382" text-anchor="middle">SessionManager</text>
+                    <text x="330" y="397" text-anchor="middle" class="subtext">session_manager.py</text>
+                </g>
+
+                <g class="node ai" id="node-generator">
+                    <rect x="470" y="280" width="150" height="50" rx="6"/>
+                    <text x="545" y="302" text-anchor="middle">AIGenerator</text>
+                    <text x="545" y="317" text-anchor="middle" class="subtext">ai_generator.py:43</text>
+                </g>
+
+                <g class="node ai" id="node-claude">
+                    <rect x="680" y="280" width="130" height="50" rx="6"/>
+                    <text x="745" y="302" text-anchor="middle">Claude API</text>
+                    <text x="745" y="317" text-anchor="middle" class="subtext">Anthropic</text>
+                </g>
+
+                <g class="node decision" id="node-decision">
+                    <polygon points="745,360 800,400 745,440 690,400" fill="#b794f4" stroke="#9370d8"/>
+                    <text x="745" y="395" text-anchor="middle" fill="#1a1a2e" font-size="10">Need to</text>
+                    <text x="745" y="408" text-anchor="middle" fill="#1a1a2e" font-size="10">search?</text>
+                </g>
+
+                <g class="node response" id="node-direct">
+                    <rect x="550" y="375" width="100" height="45" rx="6"/>
+                    <text x="600" y="395" text-anchor="middle" font-size="10">Direct Answer</text>
+                    <text x="600" y="410" text-anchor="middle" class="subtext">No search</text>
+                </g>
+
+                <g class="node ai" id="node-toolhandler">
+                    <rect x="680" y="470" width="140" height="50" rx="6"/>
+                    <text x="750" y="492" text-anchor="middle">Tool Execution</text>
+                    <text x="750" y="507" text-anchor="middle" class="subtext">ai_generator.py:89</text>
+                </g>
+
+                <g class="node backend" id="node-searchtool">
+                    <rect x="470" y="470" width="160" height="50" rx="6"/>
+                    <text x="550" y="492" text-anchor="middle">CourseSearchTool</text>
+                    <text x="550" y="507" text-anchor="middle" class="subtext">search_tools.py:52</text>
+                </g>
+
+                <g class="node backend" id="node-vectorstore">
+                    <rect x="250" y="470" width="160" height="50" rx="6"/>
+                    <text x="330" y="492" text-anchor="middle">VectorStore</text>
+                    <text x="330" y="507" text-anchor="middle" class="subtext">vector_store.py:61</text>
+                </g>
+
+                <g class="node database" id="node-chromadb">
+                    <ellipse cx="735" cy="570" rx="70" ry="30"/>
+                    <text x="735" y="567" text-anchor="middle">ChromaDB</text>
+                    <text x="735" y="582" text-anchor="middle" class="subtext">Embeddings</text>
+                </g>
+
+                <g class="node response" id="node-final">
+                    <rect x="470" y="560" width="130" height="45" rx="6"/>
+                    <text x="535" y="580" text-anchor="middle" font-size="10">Final Response</text>
+                    <text x="535" y="595" text-anchor="middle" class="subtext">+ Sources</text>
+                </g>
+
+                <!-- Arrows -->
+                <g id="arrows">
+                    <line class="arrow" id="arrow-1" x1="110" y1="120" x2="110" y2="135" stroke="#64ffda" marker-end="url(#arrowhead-dim)"/>
+                    <text class="arrow-label" id="label-1" x="120" y="130" fill="#64ffda" font-size="9">1</text>
+
+                    <line class="arrow" id="arrow-2" x1="110" y1="195" x2="110" y2="275" stroke="#64ffda" marker-end="url(#arrowhead-dim)"/>
+                    <text class="arrow-label" id="label-2" x="120" y="240" fill="#64ffda" font-size="9">2</text>
+
+                    <line class="arrow" id="arrow-3" x1="195" y1="305" x2="245" y2="305" stroke="#64ffda" marker-end="url(#arrowhead-dim)"/>
+                    <text class="arrow-label" id="label-3" x="220" y="298" fill="#64ffda" font-size="9">3</text>
+
+                    <line class="arrow" id="arrow-4a" x1="330" y1="335" x2="330" y2="355" stroke="#64ffda" marker-end="url(#arrowhead-dim)"/>
+                    <text class="arrow-label" id="label-4a" x="340" y="348" fill="#64ffda" font-size="9">4</text>
+
+                    <line class="arrow" id="arrow-4b" x1="330" y1="355" x2="330" y2="335" stroke="#64ffda" marker-end="url(#arrowhead-dim)"/>
+
+                    <line class="arrow" id="arrow-5" x1="415" y1="305" x2="465" y2="305" stroke="#64ffda" marker-end="url(#arrowhead-dim)"/>
+                    <text class="arrow-label" id="label-5" x="440" y="298" fill="#64ffda" font-size="9">5</text>
+
+                    <line class="arrow" id="arrow-6" x1="625" y1="305" x2="675" y2="305" stroke="#64ffda" marker-end="url(#arrowhead-dim)"/>
+                    <text class="arrow-label" id="label-6" x="650" y="298" fill="#64ffda" font-size="9">6</text>
+
+                    <line class="arrow" id="arrow-7" x1="745" y1="335" x2="745" y2="355" stroke="#64ffda" marker-end="url(#arrowhead-dim)"/>
+                    <text class="arrow-label" id="label-7" x="755" y="348" fill="#64ffda" font-size="9">7</text>
+
+                    <line class="arrow" id="arrow-7no" x1="690" y1="400" x2="655" y2="400" stroke="#64ffda" marker-end="url(#arrowhead-dim)"/>
+                    <text class="arrow-label" id="label-7no" x="665" y="393" fill="#64ffda" font-size="9">NO</text>
+
+                    <line class="arrow" id="arrow-8" x1="745" y1="445" x2="745" y2="465" stroke="#64ffda" marker-end="url(#arrowhead-dim)"/>
+                    <text class="arrow-label" id="label-8" x="755" y="458" fill="#64ffda" font-size="9">8</text>
+
+                    <line class="arrow" id="arrow-9" x1="675" y1="495" x2="635" y2="495" stroke="#64ffda" marker-end="url(#arrowhead-dim)"/>
+                    <text class="arrow-label" id="label-9" x="655" y="488" fill="#64ffda" font-size="9">9</text>
+
+                    <line class="arrow" id="arrow-10" x1="465" y1="495" x2="415" y2="495" stroke="#64ffda" marker-end="url(#arrowhead-dim)"/>
+                    <text class="arrow-label" id="label-10" x="440" y="488" fill="#64ffda" font-size="9">10</text>
+
+                    <path class="arrow" id="arrow-11" d="M 330 525 L 330 570 L 660 570" stroke="#64ffda" fill="none" marker-end="url(#arrowhead-dim)"/>
+                    <text class="arrow-label" id="label-11" x="490" y="563" fill="#64ffda" font-size="9">11</text>
+
+                    <path class="arrow" id="arrow-12" d="M 660 570 L 330 570 L 330 525" stroke="#64ffda" fill="none" marker-end="url(#arrowhead-dim)"/>
+                    <text class="arrow-label" id="label-12" x="490" y="583" fill="#64ffda" font-size="9">12</text>
+
+                    <line class="arrow" id="arrow-13" x1="415" y1="495" x2="465" y2="495" stroke="#64ffda" marker-end="url(#arrowhead-dim)"/>
+                    <text class="arrow-label" id="label-13" x="440" y="508" fill="#64ffda" font-size="9">13</text>
+
+                    <line class="arrow" id="arrow-14" x1="635" y1="495" x2="675" y2="495" stroke="#64ffda" marker-end="url(#arrowhead-dim)"/>
+                    <text class="arrow-label" id="label-14" x="655" y="508" fill="#64ffda" font-size="9">14</text>
+
+                    <path class="arrow" id="arrow-15" d="M 820 495 L 840 495 L 840 305 L 815 305" stroke="#64ffda" fill="none" marker-end="url(#arrowhead-dim)"/>
+                    <text class="arrow-label" id="label-15" x="830" y="400" fill="#64ffda" font-size="9">15</text>
+
+                    <path class="arrow" id="arrow-16" d="M 535 560 L 535 540 L 80 540 L 80 335" stroke="#64ffda" fill="none" marker-end="url(#arrowhead-dim)"/>
+                    <text class="arrow-label" id="label-16" x="300" y="533" fill="#64ffda" font-size="9">16</text>
+
+                    <path class="arrow" id="arrow-17" d="M 80 280 L 80 230 L 250 230 L 250 125" stroke="#64ffda" fill="none" marker-end="url(#arrowhead-dim)"/>
+                    <text class="arrow-label" id="label-17" x="165" y="223" fill="#64ffda" font-size="9">17</text>
+
+                    <line class="arrow" id="arrow-18" x1="250" y1="65" x2="250" y2="45" stroke="#64ffda"/>
+                    <path class="arrow" id="arrow-18b" d="M 250 45 L 110 45 L 110 65" stroke="#64ffda" fill="none" marker-end="url(#arrowhead-dim)"/>
+                    <text class="arrow-label" id="label-18" x="180" y="40" fill="#64ffda" font-size="9">18</text>
+                </g>
+            </svg>
+        </div>
+
+        <div class="info-panel">
+            <div class="step-info">
+                <div class="step-counter">Step <span id="current-step">0</span> of <span id="total-steps">18</span></div>
+                <h2 class="step-title" id="step-title">Welcome</h2>
+                <p class="step-description" id="step-description">
+                    Click "Next" to start walking through the query flow step by step.
+                    Each step will highlight the active components and arrows in the diagram.
+                </p>
+                <div class="step-file" id="step-file" style="display: none;">
+                    <div class="step-file-label">File</div>
+                    <div class="step-file-path" id="file-path"></div>
+                </div>
+                <pre class="step-code" id="step-code" style="display: none;"></pre>
+            </div>
+            <div class="controls">
+                <button class="btn btn-secondary" id="prev-btn" disabled>Previous</button>
+                <div class="progress-bar" id="progress-bar"></div>
+                <button class="btn btn-primary" id="next-btn">Next</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const steps = [
+            {
+                title: "Welcome",
+                description: "This interactive diagram shows how a user's query flows through the RAG chatbot system. Click 'Next' to begin the walkthrough.",
+                nodes: [],
+                arrows: [],
+                file: null,
+                code: null
+            },
+            {
+                title: "User Types Query",
+                description: "The user types their question into the input field in the chat interface. The frontend captures this input and prepares to send it to the backend.",
+                nodes: ["node-ui"],
+                arrows: [],
+                file: "frontend/index.html:59-64",
+                code: `<input
+  type="text"
+  id="chatInput"
+  placeholder="Ask about courses..."
+>`
+            },
+            {
+                title: "sendMessage() Triggered",
+                description: "When the user clicks Send or presses Enter, the sendMessage() function is called. It extracts the query text, shows a loading indicator, and prepares the API request.",
+                nodes: ["node-ui", "node-js"],
+                arrows: ["arrow-1", "label-1"],
+                file: "frontend/script.js:45-72",
+                code: `async function sendMessage() {
+  const query = chatInput.value.trim();
+  addMessage(query, 'user');
+
+  const response = await fetch(
+    \`\${API_URL}/query\`, {
+      method: 'POST',
+      body: JSON.stringify({
+        query: query,
+        session_id: currentSessionId
+      })
+    });
+}`
+            },
+            {
+                title: "POST Request to Backend",
+                description: "The frontend sends an HTTP POST request to /api/query with the user's query and session ID. This crosses the network boundary from browser to server.",
+                nodes: ["node-js", "node-api"],
+                arrows: ["arrow-2", "label-2"],
+                file: "frontend/script.js:63-72",
+                code: `fetch(\`\${API_URL}/query\`, {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify({
+    query: query,
+    session_id: currentSessionId
+  })
+});`
+            },
+            {
+                title: "FastAPI Endpoint Receives Request",
+                description: "The FastAPI endpoint receives the request, validates it against the QueryRequest model, and creates a new session if none exists. Then it calls the RAG system.",
+                nodes: ["node-api", "node-rag"],
+                arrows: ["arrow-3", "label-3"],
+                file: "backend/app.py:56-66",
+                code: `@app.post("/api/query")
+async def query(request: QueryRequest):
+    session_id = request.session_id
+    if not session_id:
+        session_id = rag_system
+          .session_manager
+          .create_session()
+
+    answer, sources = rag_system.query(
+        request.query,
+        session_id
+    )`
+            },
+            {
+                title: "Get Conversation History",
+                description: "The RAG system retrieves any previous conversation history for this session. This provides context for multi-turn conversations.",
+                nodes: ["node-rag", "node-session"],
+                arrows: ["arrow-4a", "label-4a", "arrow-4b"],
+                file: "backend/session_manager.py:42-56",
+                code: `def get_conversation_history(
+    self, session_id: str
+) -> List[Dict]:
+    if session_id not in self.sessions:
+        return []
+    return self.sessions[session_id]
+           ["messages"].copy()`
+            },
+            {
+                title: "Call AI Generator",
+                description: "With the query and conversation history ready, the RAG system calls the AI generator. It passes available tools (like CourseSearchTool) that Claude can choose to use.",
+                nodes: ["node-rag", "node-generator"],
+                arrows: ["arrow-5", "label-5"],
+                file: "backend/rag_system.py:122-127",
+                code: `response = self.ai_generator
+  .generate_response(
+    query=prompt,
+    conversation_history=history,
+    tools=self.tool_manager
+          .get_tool_definitions(),
+    tool_manager=self.tool_manager
+  )`
+            },
+            {
+                title: "Claude API Call",
+                description: "The AI generator builds the API request with the system prompt, user query, conversation history, and tool definitions. It sends this to Anthropic's Claude API.",
+                nodes: ["node-generator", "node-claude"],
+                arrows: ["arrow-6", "label-6"],
+                file: "backend/ai_generator.py:68-80",
+                code: `api_params = {
+  "model": self.model,
+  "temperature": 0,
+  "max_tokens": 800,
+  "messages": [...],
+  "system": system_content,
+  "tools": tools,
+  "tool_choice": {"type": "auto"}
+}
+
+response = self.client.messages
+  .create(**api_params)`
+            },
+            {
+                title: "Claude Makes Tool Decision",
+                description: "Claude analyzes the query and decides: Does it need to search the course materials to answer this question? Or can it answer directly from its training?",
+                nodes: ["node-claude", "node-decision"],
+                arrows: ["arrow-7", "label-7"],
+                file: "backend/ai_generator.py:83-87",
+                code: `if response.stop_reason == "tool_use"
+   and tool_manager:
+    return self._handle_tool_execution(
+        response,
+        api_params,
+        tool_manager
+    )
+# else return direct response`
+            },
+            {
+                title: "Decision: Search Needed (YES)",
+                description: "For course-specific questions, Claude decides to use the CourseSearchTool. The tool_use response triggers the tool execution handler.",
+                nodes: ["node-decision", "node-toolhandler"],
+                arrows: ["arrow-8", "label-8"],
+                file: "backend/ai_generator.py:89-105",
+                code: `def _handle_tool_execution(
+    self, initial_response, ...
+):
+    # Process each tool use request
+    for block in initial_response.content:
+        if block.type == "tool_use":
+            tool_result = tool_manager
+              .execute_tool(
+                block.name,
+                **block.input
+              )`
+            },
+            {
+                title: "Execute Search Tool",
+                description: "The CourseSearchTool receives the search query (and optional filters like course name or lesson number) and prepares to query the vector store.",
+                nodes: ["node-toolhandler", "node-searchtool"],
+                arrows: ["arrow-9", "label-9"],
+                file: "backend/search_tools.py:52-70",
+                code: `def execute(
+    self,
+    query: str,
+    course_name: str = None,
+    lesson_number: int = None
+) -> str:
+    results = self.store.search(
+        query=query,
+        course_name=course_name,
+        lesson_number=lesson_number
+    )`
+            },
+            {
+                title: "Vector Store Search",
+                description: "The VectorStore resolves any course name aliases, builds filters, and prepares the semantic search query for ChromaDB.",
+                nodes: ["node-searchtool", "node-vectorstore"],
+                arrows: ["arrow-10", "label-10"],
+                file: "backend/vector_store.py:61-92",
+                code: `def search(
+    self, query: str, ...
+) -> SearchResults:
+    # Resolve course name
+    course_title = self
+      ._resolve_course_name(course_name)
+
+    # Build ChromaDB filter
+    filter_dict = self._build_filter(
+        course_title,
+        lesson_number
+    )`
+            },
+            {
+                title: "ChromaDB Query",
+                description: "ChromaDB performs semantic similarity search using embeddings. It finds the most relevant document chunks that match the query meaning.",
+                nodes: ["node-vectorstore", "node-chromadb"],
+                arrows: ["arrow-11", "label-11"],
+                file: "backend/vector_store.py:93-98",
+                code: `results = self.course_content.query(
+    query_texts=[query],
+    n_results=search_limit,  # default 5
+    where=filter_dict
+)
+
+# Returns documents, metadata,
+# and similarity distances`
+            },
+            {
+                title: "Search Results Returned",
+                description: "ChromaDB returns the top matching document chunks with their metadata (course, lesson, chunk info) and similarity scores back to the VectorStore.",
+                nodes: ["node-chromadb", "node-vectorstore"],
+                arrows: ["arrow-12", "label-12"],
+                file: "backend/vector_store.py:98",
+                code: `return SearchResults(
+    documents=results['documents'][0],
+    metadatas=results['metadatas'][0],
+    distances=results['distances'][0]
+)`
+            },
+            {
+                title: "Format Results for Tool",
+                description: "The SearchTool formats the results into a readable string for Claude, including course/lesson context. It also stores sources for the UI.",
+                nodes: ["node-vectorstore", "node-searchtool"],
+                arrows: ["arrow-13", "label-13"],
+                file: "backend/search_tools.py:88-114",
+                code: `def _format_results(self, results):
+    formatted = []
+    sources = []
+
+    for doc, meta in zip(...):
+        formatted.append(
+            f"[{meta['course_title']} - "
+            f"Lesson {meta['lesson']}]\\n"
+            f"{doc}"
+        )
+        sources.append(source_str)
+
+    self.last_sources = sources
+    return "\\n\\n".join(formatted)`
+            },
+            {
+                title: "Tool Result to Handler",
+                description: "The formatted search results are passed back to the tool execution handler, which prepares them to send back to Claude.",
+                nodes: ["node-searchtool", "node-toolhandler"],
+                arrows: ["arrow-14", "label-14"],
+                file: "backend/ai_generator.py:108-124",
+                code: `# Add tool results to messages
+messages.append({
+    "role": "user",
+    "content": [{
+        "type": "tool_result",
+        "tool_use_id": tool_use_id,
+        "content": tool_result
+    }]
+})`
+            },
+            {
+                title: "Final Claude API Call",
+                description: "Claude receives the search results and generates the final answer. This second API call has no tools available - Claude must now answer using the retrieved context.",
+                nodes: ["node-toolhandler", "node-claude"],
+                arrows: ["arrow-15", "label-15"],
+                file: "backend/ai_generator.py:127-135",
+                code: `# Final request without tools
+final_params = {**api_params}
+final_params["tools"] = []
+final_params["messages"] = messages
+
+final_response = self.client
+  .messages.create(**final_params)
+
+return final_response
+  .content[0].text`
+            },
+            {
+                title: "Response Back to API",
+                description: "The complete response travels back through the system: from Claude → AIGenerator → RAGSystem → FastAPI endpoint. Sources are collected along the way.",
+                nodes: ["node-claude", "node-generator", "node-rag", "node-api", "node-final"],
+                arrows: ["arrow-16", "label-16"],
+                file: "backend/app.py:68-72",
+                code: `return QueryResponse(
+    answer=answer,
+    sources=sources,
+    session_id=session_id
+)`
+            },
+            {
+                title: "JSON Response to Frontend",
+                description: "FastAPI serializes the response as JSON and sends it back to the browser. The response includes the answer text, source citations, and session ID.",
+                nodes: ["node-api", "node-display"],
+                arrows: ["arrow-17", "label-17"],
+                file: "frontend/script.js:76-85",
+                code: `const data = await response.json();
+
+if (data.session_id) {
+    currentSessionId = data.session_id;
+}
+
+addMessage(
+    data.answer,
+    'assistant',
+    data.sources
+);`
+            },
+            {
+                title: "Display to User",
+                description: "The frontend renders the assistant's response in the chat interface, complete with formatted sources. The user sees the answer to their question!",
+                nodes: ["node-display", "node-ui"],
+                arrows: ["arrow-18", "arrow-18b", "label-18"],
+                file: "frontend/script.js:100-130",
+                code: `function addMessage(text, role, sources) {
+    const msgDiv = document.createElement('div');
+    msgDiv.className = \`message \${role}\`;
+    msgDiv.textContent = text;
+
+    if (sources && sources.length > 0) {
+        // Render source citations
+        const sourceDiv = ...
+    }
+
+    chatContainer.appendChild(msgDiv);
+}`
+            }
+        ];
+
+        let currentStep = 0;
+        const totalSteps = steps.length - 1;
+
+        // Initialize progress bar
+        const progressBar = document.getElementById('progress-bar');
+        for (let i = 0; i <= totalSteps; i++) {
+            const dot = document.createElement('div');
+            dot.className = 'progress-dot';
+            dot.dataset.step = i;
+            dot.addEventListener('click', () => goToStep(i));
+            progressBar.appendChild(dot);
+        }
+
+        document.getElementById('total-steps').textContent = totalSteps;
+
+        function updateUI() {
+            const step = steps[currentStep];
+
+            // Update info panel
+            document.getElementById('current-step').textContent = currentStep;
+            document.getElementById('step-title').textContent = step.title;
+            document.getElementById('step-description').textContent = step.description;
+
+            const fileDiv = document.getElementById('step-file');
+            const codeDiv = document.getElementById('step-code');
+
+            if (step.file) {
+                fileDiv.style.display = 'block';
+                document.getElementById('file-path').textContent = step.file;
+            } else {
+                fileDiv.style.display = 'none';
+            }
+
+            if (step.code) {
+                codeDiv.style.display = 'block';
+                codeDiv.textContent = step.code;
+            } else {
+                codeDiv.style.display = 'none';
+            }
+
+            // Update buttons
+            document.getElementById('prev-btn').disabled = currentStep === 0;
+            document.getElementById('next-btn').disabled = currentStep === totalSteps;
+            document.getElementById('next-btn').textContent = currentStep === 0 ? 'Start' : 'Next';
+
+            // Update progress dots
+            document.querySelectorAll('.progress-dot').forEach((dot, i) => {
+                dot.classList.remove('active', 'completed');
+                if (i === currentStep) {
+                    dot.classList.add('active');
+                } else if (i < currentStep) {
+                    dot.classList.add('completed');
+                }
+            });
+
+            // Update diagram
+            updateDiagram();
+        }
+
+        function updateDiagram() {
+            const step = steps[currentStep];
+
+            // Reset all nodes
+            document.querySelectorAll('.node').forEach(node => {
+                node.classList.remove('active', 'inactive', 'highlight');
+                if (currentStep > 0) {
+                    node.classList.add('inactive');
+                }
+            });
+
+            // Reset all arrows
+            document.querySelectorAll('.arrow, .arrow-label').forEach(el => {
+                el.classList.remove('active');
+            });
+
+            // Activate current step's nodes
+            step.nodes.forEach(nodeId => {
+                const node = document.getElementById(nodeId);
+                if (node) {
+                    node.classList.remove('inactive');
+                    node.classList.add('active');
+                }
+            });
+
+            // Activate current step's arrows
+            step.arrows.forEach(arrowId => {
+                const arrow = document.getElementById(arrowId);
+                if (arrow) {
+                    arrow.classList.add('active');
+                }
+            });
+
+            // Highlight previously visited nodes
+            for (let i = 1; i < currentStep; i++) {
+                steps[i].nodes.forEach(nodeId => {
+                    const node = document.getElementById(nodeId);
+                    if (node && !step.nodes.includes(nodeId)) {
+                        node.classList.remove('inactive');
+                        node.classList.add('highlight');
+                    }
+                });
+            }
+        }
+
+        function goToStep(step) {
+            currentStep = step;
+            updateUI();
+        }
+
+        document.getElementById('next-btn').addEventListener('click', () => {
+            if (currentStep < totalSteps) {
+                currentStep++;
+                updateUI();
+            }
+        });
+
+        document.getElementById('prev-btn').addEventListener('click', () => {
+            if (currentStep > 0) {
+                currentStep--;
+                updateUI();
+            }
+        });
+
+        // Keyboard navigation
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowRight' || e.key === ' ') {
+                if (currentStep < totalSteps) {
+                    currentStep++;
+                    updateUI();
+                }
+            } else if (e.key === 'ArrowLeft') {
+                if (currentStep > 0) {
+                    currentStep--;
+                    updateUI();
+                }
+            }
+        });
+
+        // Initialize
+        updateUI();
+    </script>
+</body>
+</html>
