@@ -43,7 +43,7 @@ class QueryRequest(BaseModel):
 class QueryResponse(BaseModel):
     """Response model for course queries"""
     answer: str
-    sources: List[str]
+    sources: List[dict]  # Each dict has "text" and "link" keys
     session_id: str
 
 class CourseStats(BaseModel):
