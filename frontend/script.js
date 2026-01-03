@@ -1,6 +1,16 @@
 // API base URL - use relative path to work from any host
 const API_URL = '/api';
 
+// Configure marked to open links in new tabs
+marked.use({
+    renderer: {
+        link({ href, title, text }) {
+            const titleAttr = title ? ` title="${title}"` : '';
+            return `<a href="${href}"${titleAttr} target="_blank" rel="noopener noreferrer">${text}</a>`;
+        }
+    }
+});
+
 // Global state
 let currentSessionId = null;
 

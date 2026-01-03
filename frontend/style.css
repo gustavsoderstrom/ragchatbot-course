@@ -373,6 +373,26 @@ header h1 {
     color: var(--text-secondary);
 }
 
+.message-content a {
+    color: #60a5fa;
+    text-decoration: none;
+    transition: color 0.2s ease;
+}
+
+.message-content a:hover {
+    color: #93c5fd;
+    text-decoration: underline;
+}
+
+/* Lesson links in outline - white default, light blue hover */
+.message-content li a {
+    color: var(--text-primary);
+}
+
+.message-content li a:hover {
+    color: #60a5fa;
+}
+
 /* Welcome message special styling */
 .message.welcome-message .message-content {
     background: var(--surface);
