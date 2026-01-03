@@ -28,6 +28,9 @@ function setupEventListeners() {
     chatInput.addEventListener('keypress', (e) => {
         if (e.key === 'Enter') sendMessage();
     });
+
+    // New chat button
+    document.getElementById('newChatButton').addEventListener('click', createNewSession);
     
     
     // Suggested questions
@@ -122,9 +125,16 @@ function addMessage(content, type, sources = null, isWelcome = false) {
     let html = `<div class="message-content">${displayContent}</div>`;
     
     if (sources && sources.length > 0) {
-        const sourceLinks = sources.map(s =>
-            s.link ? `<a href="${s.link}" target="_blank">${s.text}</a>` : s.text
-        ).join(', ');
+        const sourceLinks = sources.map(s => {
+            const linkContent = s.link
+                ? `<a href="${s.link}" target="_blank">${s.text}</a>`
+                : s.text;
+            const scoreClass = s.score >= 70 ? 'high' : s.score >= 40 ? 'medium' : 'low';
+            const scoreDisplay = s.score !== undefined
+                ? `<span class="relevance-score ${scoreClass}">${s.score}%</span>`
+                : '';
+            return `<div class="source-item">• ${linkContent} ${scoreDisplay}</div>`;
+        }).join('');
         html += `
             <details class="sources-collapsible">
                 <summary class="sources-header">Sources</summary>

@@ -90,7 +90,7 @@ class CourseSearchTool(Tool):
         formatted = []
         sources = []  # Track sources for the UI
 
-        for doc, meta in zip(results.documents, results.metadata):
+        for doc, meta, distance in zip(results.documents, results.metadata, results.distances):
             course_title = meta.get('course_title', 'unknown')
             lesson_num = meta.get('lesson_number')
 
@@ -110,8 +110,11 @@ class CourseSearchTool(Tool):
             if lesson_num is not None:
                 lesson_link = self.store.get_lesson_link(course_title, lesson_num)
 
-            # Store source as dict with text and link
-            sources.append({"text": source_text, "link": lesson_link})
+            # Calculate relevance score (0-100%) from distance (0-2)
+            score = max(0, round(100 - (distance * 50)))
+
+            # Store source as dict with text, link, and score
+            sources.append({"text": source_text, "link": lesson_link, "score": score})
 
             formatted.append(f"{header}\n{doc}")
 
