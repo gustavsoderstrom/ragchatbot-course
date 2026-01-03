@@ -186,6 +186,15 @@ async function loadCourseStats() {
                 courseTitles.innerHTML = data.course_titles
                     .map(title => `<div class="course-title-item">${title}</div>`)
                     .join('');
+
+                // Add click handlers for course titles
+                courseTitles.querySelectorAll('.course-title-item').forEach(item => {
+                    item.addEventListener('click', () => {
+                        const courseTitle = item.textContent;
+                        chatInput.value = `What is the outline of the "${courseTitle}" course?`;
+                        sendMessage();
+                    });
+                });
             } else {
                 courseTitles.innerHTML = '<span class="no-courses">No courses available</span>';
             }
