@@ -1,5 +1,5 @@
 Course Title: Building Towards Computer Use with Anthropic
-Course Link: https://www.deeplearning.ai/short-courses/building-toward-computer-use-with-anthropic/
+Course Link: https://www.deeplearning.ai/short-courses/building-towards-computer-use-with-anthropic/
 Course Instructor: Colt Steele
 
 Lesson 0: Introduction

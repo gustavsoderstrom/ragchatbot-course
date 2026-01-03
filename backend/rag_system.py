@@ -1,5 +1,6 @@
 from typing import List, Tuple, Optional, Dict
 import os
+import re
 from document_processor import DocumentProcessor
 from vector_store import VectorStore
 from ai_generator import AIGenerator
@@ -127,7 +128,10 @@ class RAGSystem:
             tools=self.tool_manager.get_tool_definitions(),
             tool_manager=self.tool_manager
         )
-        
+
+        # Add course links to response text
+        response = self._add_course_links(response)
+
         # Get sources from the search tool
         sources = self.tool_manager.get_last_sources()
 
@@ -147,3 +151,35 @@ class RAGSystem:
             "total_courses": self.vector_store.get_course_count(),
             "course_titles": self.vector_store.get_existing_course_titles()
         }
+
+    def _add_course_links(self, response: str) -> str:
+        """Replace course title mentions with markdown links"""
+        # Get all courses with their links
+        all_courses = self.vector_store.get_all_courses_metadata()
+
+        # Sort by title length (longest first) to avoid partial replacements
+        # e.g., "MCP" shouldn't match inside "MCP: Build Rich-Context..."
+        all_courses.sort(key=lambda c: len(c['title']), reverse=True)
+
+        # Replace each course mention with a link
+        for course in all_courses:
+            title = course['title']
+            link = course.get('course_link')
+            if not link:
+                continue
+
+            # Skip if already a markdown link
+            if f"[{title}]" in response:
+                continue
+
+            # Match title with optional surrounding quotes
+            # Handles: "Course Name" or Course Name
+            pattern = rf'"{re.escape(title)}"|{re.escape(title)}'
+
+            # Replace with markdown link (removing quotes if present)
+            def replace_with_link(_):
+                return f"[{title}]({link})"
+
+            response = re.sub(pattern, replace_with_link, response)
+
+        return response
