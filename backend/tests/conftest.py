@@ -4,7 +4,7 @@ Shared fixtures for RAG chatbot backend tests.
 import pytest
 import sys
 import os
-from unittest.mock import Mock, MagicMock
+from unittest.mock import Mock, MagicMock, patch
 from dataclasses import dataclass
 from typing import List, Dict, Any, Optional
 
@@ -13,6 +13,35 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from vector_store import SearchResults
 from models import Course, Lesson, CourseChunk
+
+
+# === API Testing Fixtures ===
+@pytest.fixture
+def mock_rag_system():
+    """Creates a mock RAGSystem for API testing"""
+    mock_system = Mock()
+    mock_system.session_manager = Mock()
+    mock_system.session_manager.create_session.return_value = "test-session-123"
+    mock_system.query.return_value = (
+        "Python is a versatile programming language.",
+        [{"text": "Introduction to Python - Lesson 1", "link": "https://example.com/python/1"}]
+    )
+    mock_system.get_course_analytics.return_value = {
+        "total_courses": 3,
+        "course_titles": ["Introduction to Python", "Machine Learning Basics", "Web Development"]
+    }
+    return mock_system
+
+
+@pytest.fixture
+def mock_rag_system_error():
+    """Creates a mock RAGSystem that raises exceptions"""
+    mock_system = Mock()
+    mock_system.session_manager = Mock()
+    mock_system.session_manager.create_session.return_value = "test-session-123"
+    mock_system.query.side_effect = Exception("Database connection failed")
+    mock_system.get_course_analytics.side_effect = Exception("Analytics unavailable")
+    return mock_system
 
 
 # === Mock Configuration ===
