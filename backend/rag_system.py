@@ -129,11 +129,14 @@ class RAGSystem:
             tool_manager=self.tool_manager
         )
 
+        # Get sources from the search tool
+        sources = self.tool_manager.get_last_sources()
+
         # Add course links to response text
         response = self._add_course_links(response)
 
-        # Get sources from the search tool
-        sources = self.tool_manager.get_last_sources()
+        # Add lesson links to response text (uses sources for course context)
+        response = self._add_lesson_links(response, sources)
 
         # Reset sources after retrieving them
         self.tool_manager.reset_sources()
@@ -183,3 +186,57 @@ class RAGSystem:
             response = re.sub(pattern, replace_with_link, response)
 
         return response
+
+    def _add_lesson_links(self, response: str, sources: List[Dict]) -> str:
+        """
+        Replace lesson mentions (e.g., 'Lesson 6') with markdown links.
+
+        Uses course context from sources to determine which course the lessons belong to.
+        """
+        if not sources:
+            return response
+
+        # Extract course titles from sources
+        # Source text format: "Course Title - Lesson N" or just "Course Title"
+        course_titles = []
+        for source in sources:
+            text = source.get("text", "")
+            if " - Lesson" in text:
+                course_title = text.split(" - Lesson")[0]
+            else:
+                course_title = text
+            if course_title:
+                course_titles.append(course_title)
+
+        if not course_titles:
+            return response
+
+        # Get the most common course title (handles multi-course scenarios)
+        from collections import Counter
+        course_counter = Counter(course_titles)
+        primary_course = course_counter.most_common(1)[0][0]
+
+        # Pattern to match "Lesson X" or "lesson X" (case insensitive for 'lesson')
+        pattern = r'\b([Ll]esson)\s+(\d+)\b'
+
+        def replace_with_link(match):
+            lesson_word = match.group(1)  # Preserves original case
+            lesson_num = int(match.group(2))
+
+            # Check if already inside a markdown link
+            # Look for preceding [ that would indicate this is link text
+            start = match.start()
+            prefix = response[max(0, start - 50):start]
+            if '[' in prefix and '](' not in prefix[prefix.rfind('['):]:
+                # Inside a markdown link text, don't replace
+                return match.group(0)
+
+            # Get lesson link from vector store
+            lesson_link = self.vector_store.get_lesson_link(primary_course, lesson_num)
+
+            if lesson_link:
+                return f"[{lesson_word} {lesson_num}]({lesson_link})"
+            else:
+                return match.group(0)  # No link found, keep original
+
+        return re.sub(pattern, replace_with_link, response)

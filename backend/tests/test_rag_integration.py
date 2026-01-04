@@ -245,3 +245,187 @@ class TestRAGSystemAddCourseLinks:
 
             # The response should have the link
             assert "[Python 101]" in response or "https://example.com/python" in response
+
+
+class TestRAGSystemAddLessonLinks:
+    """Test the _add_lesson_links method"""
+
+    def test_add_lesson_links_converts_lesson_mentions(self, mock_config):
+        """Test that 'Lesson X' mentions are converted to markdown links"""
+        with patch('rag_system.VectorStore') as MockVectorStore, \
+             patch('rag_system.AIGenerator') as MockAIGenerator, \
+             patch('rag_system.DocumentProcessor'), \
+             patch('rag_system.SessionManager'):
+
+            mock_vs = Mock()
+            mock_vs.get_all_courses_metadata.return_value = []
+            mock_vs.get_lesson_link.return_value = "https://example.com/python/lesson6"
+            MockVectorStore.return_value = mock_vs
+
+            mock_ai = Mock()
+            mock_ai.generate_response.return_value = "Check out Lesson 6 for more details."
+            MockAIGenerator.return_value = mock_ai
+
+            from rag_system import RAGSystem
+            rag = RAGSystem(mock_config)
+
+            # Mock sources with course context
+            rag.tool_manager.get_last_sources = Mock(return_value=[
+                {"text": "Python 101 - Lesson 5", "link": "https://example.com/python/lesson5", "score": 85}
+            ])
+            rag.tool_manager.reset_sources = Mock()
+
+            response, _ = rag.query("Tell me about lesson 6")
+
+            # Should have markdown link for Lesson 6
+            assert "[Lesson 6](https://example.com/python/lesson6)" in response
+
+    def test_add_lesson_links_handles_lowercase(self, mock_config):
+        """Test that lowercase 'lesson X' is also converted"""
+        with patch('rag_system.VectorStore') as MockVectorStore, \
+             patch('rag_system.AIGenerator') as MockAIGenerator, \
+             patch('rag_system.DocumentProcessor'), \
+             patch('rag_system.SessionManager'):
+
+            mock_vs = Mock()
+            mock_vs.get_all_courses_metadata.return_value = []
+            mock_vs.get_lesson_link.return_value = "https://example.com/course/lesson7"
+            MockVectorStore.return_value = mock_vs
+
+            mock_ai = Mock()
+            mock_ai.generate_response.return_value = "See lesson 7 for more info."
+            MockAIGenerator.return_value = mock_ai
+
+            from rag_system import RAGSystem
+            rag = RAGSystem(mock_config)
+
+            rag.tool_manager.get_last_sources = Mock(return_value=[
+                {"text": "MCP Course", "link": "https://example.com/course", "score": 100}
+            ])
+            rag.tool_manager.reset_sources = Mock()
+
+            response, _ = rag.query("What about lesson 7?")
+
+            # Should preserve lowercase and add link
+            assert "[lesson 7](https://example.com/course/lesson7)" in response
+
+    def test_add_lesson_links_handles_multiple_lessons(self, mock_config):
+        """Test that multiple lesson mentions are all converted"""
+        with patch('rag_system.VectorStore') as MockVectorStore, \
+             patch('rag_system.AIGenerator') as MockAIGenerator, \
+             patch('rag_system.DocumentProcessor'), \
+             patch('rag_system.SessionManager'):
+
+            mock_vs = Mock()
+            mock_vs.get_all_courses_metadata.return_value = []
+            # Return different links based on lesson number
+            mock_vs.get_lesson_link.side_effect = lambda course, num: f"https://example.com/lesson{num}"
+            MockVectorStore.return_value = mock_vs
+
+            mock_ai = Mock()
+            mock_ai.generate_response.return_value = "Lesson 4 covers basics, Lesson 5 is advanced."
+            MockAIGenerator.return_value = mock_ai
+
+            from rag_system import RAGSystem
+            rag = RAGSystem(mock_config)
+
+            rag.tool_manager.get_last_sources = Mock(return_value=[
+                {"text": "Python Course", "link": "https://example.com/python", "score": 100}
+            ])
+            rag.tool_manager.reset_sources = Mock()
+
+            response, _ = rag.query("Compare lessons 4 and 5")
+
+            assert "[Lesson 4](https://example.com/lesson4)" in response
+            assert "[Lesson 5](https://example.com/lesson5)" in response
+
+    def test_add_lesson_links_no_sources_returns_unchanged(self, mock_config):
+        """Test that response is unchanged when no sources available"""
+        with patch('rag_system.VectorStore') as MockVectorStore, \
+             patch('rag_system.AIGenerator') as MockAIGenerator, \
+             patch('rag_system.DocumentProcessor'), \
+             patch('rag_system.SessionManager'):
+
+            mock_vs = Mock()
+            mock_vs.get_all_courses_metadata.return_value = []
+            MockVectorStore.return_value = mock_vs
+
+            mock_ai = Mock()
+            mock_ai.generate_response.return_value = "Check Lesson 6 for details."
+            MockAIGenerator.return_value = mock_ai
+
+            from rag_system import RAGSystem
+            rag = RAGSystem(mock_config)
+
+            # No sources - empty list
+            rag.tool_manager.get_last_sources = Mock(return_value=[])
+            rag.tool_manager.reset_sources = Mock()
+
+            response, _ = rag.query("Tell me about lesson 6")
+
+            # Should remain as plain text (no link)
+            assert "Lesson 6" in response
+            assert "[Lesson 6]" not in response
+
+    def test_add_lesson_links_no_link_found_returns_unchanged(self, mock_config):
+        """Test that lesson mention stays as text if link not found"""
+        with patch('rag_system.VectorStore') as MockVectorStore, \
+             patch('rag_system.AIGenerator') as MockAIGenerator, \
+             patch('rag_system.DocumentProcessor'), \
+             patch('rag_system.SessionManager'):
+
+            mock_vs = Mock()
+            mock_vs.get_all_courses_metadata.return_value = []
+            mock_vs.get_lesson_link.return_value = None  # No link found
+            MockVectorStore.return_value = mock_vs
+
+            mock_ai = Mock()
+            mock_ai.generate_response.return_value = "See Lesson 99 for details."
+            MockAIGenerator.return_value = mock_ai
+
+            from rag_system import RAGSystem
+            rag = RAGSystem(mock_config)
+
+            rag.tool_manager.get_last_sources = Mock(return_value=[
+                {"text": "Python Course", "link": "https://example.com", "score": 100}
+            ])
+            rag.tool_manager.reset_sources = Mock()
+
+            response, _ = rag.query("What about lesson 99?")
+
+            # Should remain as plain text since link not found
+            assert "Lesson 99" in response
+            assert "[Lesson 99]" not in response
+
+    def test_add_lesson_links_uses_most_common_course(self, mock_config):
+        """Test that the most common course in sources is used for link lookup"""
+        with patch('rag_system.VectorStore') as MockVectorStore, \
+             patch('rag_system.AIGenerator') as MockAIGenerator, \
+             patch('rag_system.DocumentProcessor'), \
+             patch('rag_system.SessionManager'):
+
+            mock_vs = Mock()
+            mock_vs.get_all_courses_metadata.return_value = []
+            mock_vs.get_lesson_link.return_value = "https://example.com/mcp/lesson5"
+            MockVectorStore.return_value = mock_vs
+
+            mock_ai = Mock()
+            mock_ai.generate_response.return_value = "Lesson 5 covers this topic."
+            MockAIGenerator.return_value = mock_ai
+
+            from rag_system import RAGSystem
+            rag = RAGSystem(mock_config)
+
+            # MCP Course appears 3 times, Python Course once
+            rag.tool_manager.get_last_sources = Mock(return_value=[
+                {"text": "MCP Course - Lesson 1", "link": "https://example.com/mcp/1", "score": 90},
+                {"text": "MCP Course - Lesson 2", "link": "https://example.com/mcp/2", "score": 85},
+                {"text": "Python Course - Lesson 3", "link": "https://example.com/py/3", "score": 80},
+                {"text": "MCP Course - Lesson 4", "link": "https://example.com/mcp/4", "score": 75},
+            ])
+            rag.tool_manager.reset_sources = Mock()
+
+            response, _ = rag.query("Tell me about lesson 5")
+
+            # Should call get_lesson_link with MCP Course (most common)
+            mock_vs.get_lesson_link.assert_called_with("MCP Course", 5)

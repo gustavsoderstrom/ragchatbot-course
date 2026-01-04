@@ -168,3 +168,62 @@ def mock_anthropic_client(mock_anthropic_response_no_tool):
     mock_client = Mock()
     mock_client.messages.create.return_value = mock_anthropic_response_no_tool
     return mock_client
+
+
+# === Multi-Round Tool Calling Fixtures ===
+@pytest.fixture
+def mock_anthropic_response_second_tool_use():
+    """Mock Anthropic response requesting a second tool after first result"""
+    mock_response = Mock()
+    mock_response.stop_reason = "tool_use"
+
+    tool_use_block = Mock()
+    tool_use_block.type = "tool_use"
+    tool_use_block.name = "get_course_outline"
+    tool_use_block.id = "tool_456"
+    tool_use_block.input = {"course_title": "Introduction to Python"}
+
+    mock_response.content = [tool_use_block]
+    return mock_response
+
+
+@pytest.fixture
+def mock_multi_round_response_sequence(
+    mock_anthropic_response_with_tool,
+    mock_anthropic_response_second_tool_use,
+    mock_anthropic_final_response
+):
+    """Complete sequence for 2-round tool calling: tool1 -> tool2 -> final"""
+    return [
+        mock_anthropic_response_with_tool,      # Round 1: first tool request
+        mock_anthropic_response_second_tool_use,  # Round 2: second tool request
+        mock_anthropic_final_response            # Final: text response
+    ]
+
+
+def create_tool_use_response(tool_name: str, tool_id: str, tool_input: dict):
+    """Factory function to create mock tool use responses"""
+    mock_response = Mock()
+    mock_response.stop_reason = "tool_use"
+
+    tool_use_block = Mock()
+    tool_use_block.type = "tool_use"
+    tool_use_block.name = tool_name
+    tool_use_block.id = tool_id
+    tool_use_block.input = tool_input
+
+    mock_response.content = [tool_use_block]
+    return mock_response
+
+
+def create_text_response(text: str):
+    """Factory function to create mock text responses"""
+    mock_response = Mock()
+    mock_response.stop_reason = "end_turn"
+
+    text_block = Mock()
+    text_block.type = "text"
+    text_block.text = text
+
+    mock_response.content = [text_block]
+    return mock_response
