@@ -156,6 +156,7 @@ header {
     display: block;
     text-align: center;
     padding: 1rem 1rem 0.5rem;
+    border-bottom: 1px solid var(--border-color);
 }
 
 header h1 {
