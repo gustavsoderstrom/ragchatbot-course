@@ -23,7 +23,9 @@ from vector_store import SearchResults
 class TestCourseSearchToolExecute:
     """Test CourseSearchTool.execute() method (lines 52-86)"""
 
-    def test_execute_returns_formatted_results(self, mock_vector_store, sample_search_results):
+    def test_execute_returns_formatted_results(
+        self, mock_vector_store, sample_search_results
+    ):
         """Test that execute() returns properly formatted search results"""
         tool = CourseSearchTool(mock_vector_store)
 
@@ -31,9 +33,7 @@ class TestCourseSearchToolExecute:
 
         # Verify VectorStore.search was called correctly
         mock_vector_store.search.assert_called_once_with(
-            query="Python programming",
-            course_name=None,
-            lesson_number=None
+            query="Python programming", course_name=None, lesson_number=None
         )
 
         # Verify result contains expected content
@@ -48,9 +48,7 @@ class TestCourseSearchToolExecute:
         tool.execute(query="variables", course_name="Python")
 
         mock_vector_store.search.assert_called_once_with(
-            query="variables",
-            course_name="Python",
-            lesson_number=None
+            query="variables", course_name="Python", lesson_number=None
         )
 
     def test_execute_with_lesson_filter(self, mock_vector_store):
@@ -60,9 +58,7 @@ class TestCourseSearchToolExecute:
         tool.execute(query="basics", lesson_number=1)
 
         mock_vector_store.search.assert_called_once_with(
-            query="basics",
-            course_name=None,
-            lesson_number=1
+            query="basics", course_name=None, lesson_number=1
         )
 
     def test_execute_with_both_filters(self, mock_vector_store):
@@ -72,12 +68,12 @@ class TestCourseSearchToolExecute:
         tool.execute(query="syntax", course_name="Python", lesson_number=2)
 
         mock_vector_store.search.assert_called_once_with(
-            query="syntax",
-            course_name="Python",
-            lesson_number=2
+            query="syntax", course_name="Python", lesson_number=2
         )
 
-    def test_execute_handles_empty_results(self, mock_vector_store, empty_search_results):
+    def test_execute_handles_empty_results(
+        self, mock_vector_store, empty_search_results
+    ):
         """Test that execute() returns appropriate message for empty results"""
         mock_vector_store.search.return_value = empty_search_results
         tool = CourseSearchTool(mock_vector_store)
@@ -86,7 +82,9 @@ class TestCourseSearchToolExecute:
 
         assert "No relevant content found" in result
 
-    def test_execute_handles_empty_results_with_course_filter(self, mock_vector_store, empty_search_results):
+    def test_execute_handles_empty_results_with_course_filter(
+        self, mock_vector_store, empty_search_results
+    ):
         """Test empty results message includes course filter information"""
         mock_vector_store.search.return_value = empty_search_results
         tool = CourseSearchTool(mock_vector_store)
@@ -96,7 +94,9 @@ class TestCourseSearchToolExecute:
         assert "No relevant content found" in result
         assert "course 'Python'" in result
 
-    def test_execute_handles_empty_results_with_lesson_filter(self, mock_vector_store, empty_search_results):
+    def test_execute_handles_empty_results_with_lesson_filter(
+        self, mock_vector_store, empty_search_results
+    ):
         """Test empty results message includes lesson filter information"""
         mock_vector_store.search.return_value = empty_search_results
         tool = CourseSearchTool(mock_vector_store)
@@ -106,7 +106,9 @@ class TestCourseSearchToolExecute:
         assert "No relevant content found" in result
         assert "lesson 5" in result
 
-    def test_execute_handles_empty_results_with_both_filters(self, mock_vector_store, empty_search_results):
+    def test_execute_handles_empty_results_with_both_filters(
+        self, mock_vector_store, empty_search_results
+    ):
         """Test empty results message includes both filter information"""
         mock_vector_store.search.return_value = empty_search_results
         tool = CourseSearchTool(mock_vector_store)
@@ -137,7 +139,9 @@ class TestCourseSearchToolExecute:
         assert "link" in tool.last_sources[0]
         assert "score" in tool.last_sources[0]
 
-    def test_execute_calculates_relevance_score(self, mock_vector_store, sample_search_results):
+    def test_execute_calculates_relevance_score(
+        self, mock_vector_store, sample_search_results
+    ):
         """Test that relevance score is calculated correctly from distance"""
         tool = CourseSearchTool(mock_vector_store)
 
@@ -193,9 +197,9 @@ class TestCourseOutlineTool:
     def test_execute_handles_no_course_found(self, mock_vector_store):
         """Test error handling when course not found"""
         mock_vector_store.course_catalog.query.return_value = {
-            'documents': [[]],
-            'metadatas': [[]],
-            'distances': [[]]
+            "documents": [[]],
+            "metadatas": [[]],
+            "distances": [[]],
         }
         tool = CourseOutlineTool(mock_vector_store)
 

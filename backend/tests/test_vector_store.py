@@ -26,25 +26,21 @@ class TestSearchResults:
     def test_from_chroma_with_results(self):
         """Test creating SearchResults from ChromaDB query results"""
         chroma_results = {
-            'documents': [['Doc 1', 'Doc 2']],
-            'metadatas': [[{'title': 'A'}, {'title': 'B'}]],
-            'distances': [[0.1, 0.2]]
+            "documents": [["Doc 1", "Doc 2"]],
+            "metadatas": [[{"title": "A"}, {"title": "B"}]],
+            "distances": [[0.1, 0.2]],
         }
 
         results = SearchResults.from_chroma(chroma_results)
 
-        assert results.documents == ['Doc 1', 'Doc 2']
+        assert results.documents == ["Doc 1", "Doc 2"]
         assert len(results.metadata) == 2
         assert results.distances == [0.1, 0.2]
         assert results.error is None
 
     def test_from_chroma_empty_results(self):
         """Test creating SearchResults from empty ChromaDB results"""
-        chroma_results = {
-            'documents': [[]],
-            'metadatas': [[]],
-            'distances': [[]]
-        }
+        chroma_results = {"documents": [[]], "metadatas": [[]], "distances": [[]]}
 
         results = SearchResults.from_chroma(chroma_results)
 
@@ -65,9 +61,7 @@ class TestSearchResults:
     def test_is_empty_false_for_documents(self):
         """Test is_empty returns False when documents exist"""
         results = SearchResults(
-            documents=["Some content"],
-            metadata=[{"title": "Test"}],
-            distances=[0.1]
+            documents=["Some content"], metadata=[{"title": "Test"}], distances=[0.1]
         )
         assert not results.is_empty()
 
@@ -90,7 +84,7 @@ class TestVectorStoreSearch:
         vs = VectorStore(
             chroma_path=temp_chroma_path,
             embedding_model="all-MiniLM-L6-v2",
-            max_results=0  # BUG: This is set to 0 in production config
+            max_results=0,  # BUG: This is set to 0 in production config
         )
 
         # Add some test data
@@ -99,7 +93,7 @@ class TestVectorStoreSearch:
                 content="Python programming basics and fundamentals",
                 course_title="Python 101",
                 lesson_number=1,
-                chunk_index=0
+                chunk_index=0,
             )
         ]
         vs.add_course_content(chunks)
@@ -108,15 +102,16 @@ class TestVectorStoreSearch:
         results = vs.search(query="Python")
 
         # This demonstrates the bug - no results returned
-        assert results.is_empty(), \
-            "With max_results=0, search returns empty results - THIS IS THE BUG"
+        assert (
+            results.is_empty()
+        ), "With max_results=0, search returns empty results - THIS IS THE BUG"
 
     def test_search_with_positive_max_results_returns_data(self, temp_chroma_path):
         """Test that search works correctly with positive MAX_RESULTS"""
         vs = VectorStore(
             chroma_path=temp_chroma_path,
             embedding_model="all-MiniLM-L6-v2",
-            max_results=5  # Correct value
+            max_results=5,  # Correct value
         )
 
         # Add some test data
@@ -125,7 +120,7 @@ class TestVectorStoreSearch:
                 content="Python programming basics and fundamentals",
                 course_title="Python 101",
                 lesson_number=1,
-                chunk_index=0
+                chunk_index=0,
             )
         ]
         vs.add_course_content(chunks)
@@ -133,8 +128,9 @@ class TestVectorStoreSearch:
         # Search should return results
         results = vs.search(query="Python")
 
-        assert not results.is_empty(), \
-            "With max_results=5, search should return results"
+        assert (
+            not results.is_empty()
+        ), "With max_results=5, search should return results"
         assert "Python" in results.documents[0]
 
     def test_search_uses_limit_parameter_over_max_results(self, temp_chroma_path):
@@ -142,7 +138,7 @@ class TestVectorStoreSearch:
         vs = VectorStore(
             chroma_path=temp_chroma_path,
             embedding_model="all-MiniLM-L6-v2",
-            max_results=0  # Would return nothing
+            max_results=0,  # Would return nothing
         )
 
         # Add test data
@@ -151,7 +147,7 @@ class TestVectorStoreSearch:
                 content="Python programming",
                 course_title="Python 101",
                 lesson_number=1,
-                chunk_index=0
+                chunk_index=0,
             )
         ]
         vs.add_course_content(chunks)
@@ -159,22 +155,19 @@ class TestVectorStoreSearch:
         # Search with explicit limit should work
         results = vs.search(query="Python", limit=5)
 
-        assert not results.is_empty(), \
-            "Explicit limit should override max_results=0"
+        assert not results.is_empty(), "Explicit limit should override max_results=0"
 
     def test_search_with_course_filter(self, temp_chroma_path):
         """Test search filtering by course name"""
         vs = VectorStore(
             chroma_path=temp_chroma_path,
             embedding_model="all-MiniLM-L6-v2",
-            max_results=5
+            max_results=5,
         )
 
         # Add course metadata for resolution
         course = Course(
-            title="Python 101",
-            course_link="http://example.com",
-            instructor="Test"
+            title="Python 101", course_link="http://example.com", instructor="Test"
         )
         vs.add_course_metadata(course)
 
@@ -184,13 +177,13 @@ class TestVectorStoreSearch:
                 content="Python basics",
                 course_title="Python 101",
                 lesson_number=1,
-                chunk_index=0
+                chunk_index=0,
             ),
             CourseChunk(
                 content="JavaScript basics",
                 course_title="JS 101",
                 lesson_number=1,
-                chunk_index=1
+                chunk_index=1,
             ),
         ]
         vs.add_course_content(chunks)
@@ -207,7 +200,7 @@ class TestVectorStoreSearch:
         vs = VectorStore(
             chroma_path=temp_chroma_path,
             embedding_model="all-MiniLM-L6-v2",
-            max_results=5
+            max_results=5,
         )
 
         results = vs.search(query="anything", course_name="Nonexistent Course")
@@ -220,7 +213,7 @@ class TestVectorStoreSearch:
         vs = VectorStore(
             chroma_path=temp_chroma_path,
             embedding_model="all-MiniLM-L6-v2",
-            max_results=5
+            max_results=5,
         )
 
         # Add chunks for different lessons
@@ -229,13 +222,13 @@ class TestVectorStoreSearch:
                 content="Introduction to Python",
                 course_title="Python 101",
                 lesson_number=1,
-                chunk_index=0
+                chunk_index=0,
             ),
             CourseChunk(
                 content="Advanced Python topics",
                 course_title="Python 101",
                 lesson_number=2,
-                chunk_index=1
+                chunk_index=1,
             ),
         ]
         vs.add_course_content(chunks)
@@ -281,8 +274,9 @@ class TestVectorStoreConfiguration:
         """Test that MAX_RESULTS should be a positive integer"""
         from config import config
 
-        assert config.MAX_RESULTS > 0, \
-            f"MAX_RESULTS should be positive, got {config.MAX_RESULTS}"
+        assert (
+            config.MAX_RESULTS > 0
+        ), f"MAX_RESULTS should be positive, got {config.MAX_RESULTS}"
 
 
 class TestVectorStoreAddContent:
@@ -299,7 +293,7 @@ class TestVectorStoreAddContent:
         vs = VectorStore(
             chroma_path=temp_chroma_path,
             embedding_model="all-MiniLM-L6-v2",
-            max_results=5
+            max_results=5,
         )
 
         course = Course(
@@ -307,8 +301,12 @@ class TestVectorStoreAddContent:
             course_link="https://example.com",
             instructor="Test Instructor",
             lessons=[
-                Lesson(lesson_number=1, title="Lesson 1", lesson_link="https://example.com/1")
-            ]
+                Lesson(
+                    lesson_number=1,
+                    title="Lesson 1",
+                    lesson_link="https://example.com/1",
+                )
+            ],
         )
 
         vs.add_course_metadata(course)
@@ -322,7 +320,7 @@ class TestVectorStoreAddContent:
         vs = VectorStore(
             chroma_path=temp_chroma_path,
             embedding_model="all-MiniLM-L6-v2",
-            max_results=5
+            max_results=5,
         )
 
         chunks = [
@@ -330,13 +328,13 @@ class TestVectorStoreAddContent:
                 content="Test content 1",
                 course_title="Test Course",
                 lesson_number=1,
-                chunk_index=0
+                chunk_index=0,
             ),
             CourseChunk(
                 content="Test content 2",
                 course_title="Test Course",
                 lesson_number=1,
-                chunk_index=1
+                chunk_index=1,
             ),
         ]
 
@@ -351,7 +349,7 @@ class TestVectorStoreAddContent:
         vs = VectorStore(
             chroma_path=temp_chroma_path,
             embedding_model="all-MiniLM-L6-v2",
-            max_results=5
+            max_results=5,
         )
 
         course = Course(
@@ -359,8 +357,12 @@ class TestVectorStoreAddContent:
             course_link="https://example.com",
             instructor="Test Instructor",  # ChromaDB requires non-None metadata values
             lessons=[
-                Lesson(lesson_number=1, title="Lesson 1", lesson_link="https://example.com/lesson1")
-            ]
+                Lesson(
+                    lesson_number=1,
+                    title="Lesson 1",
+                    lesson_link="https://example.com/lesson1",
+                )
+            ],
         )
         vs.add_course_metadata(course)
 

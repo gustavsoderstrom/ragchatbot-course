@@ -1,6 +1,7 @@
 """
 Shared fixtures for RAG chatbot backend tests.
 """
+
 import pytest
 import sys
 import os
@@ -19,6 +20,7 @@ from models import Course, Lesson, CourseChunk
 @dataclass
 class MockConfig:
     """Test configuration with sensible defaults"""
+
     ANTHROPIC_API_KEY: str = "test-api-key"
     ANTHROPIC_MODEL: str = "claude-sonnet-4-20250514"
     EMBEDDING_MODEL: str = "all-MiniLM-L6-v2"
@@ -52,9 +54,17 @@ def sample_course():
         course_link="https://example.com/python",
         instructor="John Doe",
         lessons=[
-            Lesson(lesson_number=1, title="Getting Started", lesson_link="https://example.com/python/1"),
-            Lesson(lesson_number=2, title="Variables and Types", lesson_link="https://example.com/python/2"),
-        ]
+            Lesson(
+                lesson_number=1,
+                title="Getting Started",
+                lesson_link="https://example.com/python/1",
+            ),
+            Lesson(
+                lesson_number=2,
+                title="Variables and Types",
+                lesson_link="https://example.com/python/2",
+            ),
+        ],
     )
 
 
@@ -66,13 +76,13 @@ def sample_chunks(sample_course):
             content="Python is a programming language that is widely used for web development.",
             course_title=sample_course.title,
             lesson_number=1,
-            chunk_index=0
+            chunk_index=0,
         ),
         CourseChunk(
             content="Variables store data values. In Python, you don't need to declare types.",
             course_title=sample_course.title,
             lesson_number=2,
-            chunk_index=1
+            chunk_index=1,
         ),
     ]
 
@@ -81,10 +91,12 @@ def sample_chunks(sample_course):
 def sample_search_results():
     """Sample SearchResults for testing tool execution"""
     return SearchResults(
-        documents=["Python is a programming language that is widely used for web development."],
+        documents=[
+            "Python is a programming language that is widely used for web development."
+        ],
         metadata=[{"course_title": "Introduction to Python", "lesson_number": 1}],
         distances=[0.15],
-        error=None
+        error=None,
     )
 
 
@@ -97,7 +109,9 @@ def empty_search_results():
 @pytest.fixture
 def error_search_results():
     """SearchResults with error for testing error handling"""
-    return SearchResults(documents=[], metadata=[], distances=[], error="Search error: connection failed")
+    return SearchResults(
+        documents=[], metadata=[], distances=[], error="Search error: connection failed"
+    )
 
 
 # === Mock VectorStore ===
@@ -109,13 +123,17 @@ def mock_vector_store(sample_search_results):
     mock_store.get_lesson_link.return_value = "https://example.com/python/1"
     mock_store.course_catalog = Mock()
     mock_store.course_catalog.query.return_value = {
-        'documents': [['Introduction to Python']],
-        'metadatas': [[{
-            'title': 'Introduction to Python',
-            'course_link': 'https://example.com/python',
-            'lessons_json': '[{"lesson_number": 1, "lesson_title": "Getting Started", "lesson_link": "https://example.com/python/1"}]'
-        }]],
-        'distances': [[0.1]]
+        "documents": [["Introduction to Python"]],
+        "metadatas": [
+            [
+                {
+                    "title": "Introduction to Python",
+                    "course_link": "https://example.com/python",
+                    "lessons_json": '[{"lesson_number": 1, "lesson_title": "Getting Started", "lesson_link": "https://example.com/python/1"}]',
+                }
+            ]
+        ],
+        "distances": [[0.1]],
     }
     return mock_store
 
@@ -157,7 +175,9 @@ def mock_anthropic_final_response():
     mock_response.stop_reason = "end_turn"
     mock_text_block = Mock()
     mock_text_block.type = "text"
-    mock_text_block.text = "Based on the course materials, Python is a programming language."
+    mock_text_block.text = (
+        "Based on the course materials, Python is a programming language."
+    )
     mock_response.content = [mock_text_block]
     return mock_response
 
@@ -191,13 +211,13 @@ def mock_anthropic_response_second_tool_use():
 def mock_multi_round_response_sequence(
     mock_anthropic_response_with_tool,
     mock_anthropic_response_second_tool_use,
-    mock_anthropic_final_response
+    mock_anthropic_final_response,
 ):
     """Complete sequence for 2-round tool calling: tool1 -> tool2 -> final"""
     return [
-        mock_anthropic_response_with_tool,      # Round 1: first tool request
+        mock_anthropic_response_with_tool,  # Round 1: first tool request
         mock_anthropic_response_second_tool_use,  # Round 2: second tool request
-        mock_anthropic_final_response            # Final: text response
+        mock_anthropic_final_response,  # Final: text response
     ]
 
 
