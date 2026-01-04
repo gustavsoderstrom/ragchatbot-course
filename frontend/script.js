@@ -14,6 +14,34 @@ marked.use({
 // Global state
 let currentSessionId = null;
 
+// Theme Management
+function initTheme() {
+    const savedTheme = localStorage.getItem('theme');
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+
+    // Use saved theme, or system preference, or default to dark
+    const theme = savedTheme || (prefersDark ? 'dark' : 'light');
+    setTheme(theme);
+}
+
+function setTheme(theme) {
+    if (theme === 'light') {
+        document.documentElement.setAttribute('data-theme', 'light');
+    } else {
+        document.documentElement.removeAttribute('data-theme');
+    }
+    localStorage.setItem('theme', theme);
+}
+
+function toggleTheme() {
+    const currentTheme = document.documentElement.getAttribute('data-theme');
+    const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+    setTheme(newTheme);
+}
+
+// Initialize theme immediately to prevent flash
+initTheme();
+
 // DOM elements
 let chatMessages, chatInput, sendButton, totalCourses, courseTitles;
 
@@ -41,8 +69,10 @@ function setupEventListeners() {
 
     // New chat button
     document.getElementById('newChatButton').addEventListener('click', createNewSession);
-    
-    
+
+    // Theme toggle button
+    document.getElementById('themeToggle').addEventListener('click', toggleTheme);
+
     // Suggested questions
     document.querySelectorAll('.suggested-item').forEach(button => {
         button.addEventListener('click', (e) => {
